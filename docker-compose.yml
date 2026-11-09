@@ -1,0 +1,16 @@
+# Runs ChaosLens itself. It needs the Docker socket to inject faults.
+name: chaoslens
+services:
+  chaoslens:
+    build: .
+    ports: ["8080:8000"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - chaoslens-data:/data
+    environment:
+      # Optional: AI-written reports with any OpenAI-compatible API
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+volumes:
+  chaoslens-data:

@@ -1,0 +1,46 @@
+# ShopLite: a small e-commerce backend to try ChaosLens on.
+#
+#   gateway -> api-1 | api-2          (load balanced)
+#   api-*   -> auth AND (db | cache)  (cache is a read fallback for db)
+#   auth    -> db
+#
+# Looks redundant on paper, but auth hard-depends on db, so the cache
+# fallback cannot save the APIs when db dies. ChaosLens finds this.
+name: shoplite
+
+x-svc: &svc
+  build: ./service
+  image: shoplite-svc:latest
+
+services:
+  gateway:
+    <<: *svc
+    environment: { NAME: gateway, REQUIRE: "api-1|api-2" }
+    labels: { chaoslens.requires: "api-1|api-2" }
+    ports: ["8081:8000"]
+    depends_on: [api-1, api-2]
+
+  api-1:
+    <<: *svc
+    environment: { NAME: api-1, REQUIRE: "auth,db|cache" }
+    labels: { chaoslens.requires: "auth,db|cache" }
+    depends_on: [auth, db, cache]
+
+  api-2:
+    <<: *svc
+    environment: { NAME: api-2, REQUIRE: "auth,db|cache" }
+    labels: { chaoslens.requires: "auth,db|cache" }
+    depends_on: [auth, db, cache]
+
+  auth:
+    <<: *svc
+    environment: { NAME: auth, REQUIRE: "db" }
+    depends_on: [db]
+
+  db:
+    <<: *svc
+    environment: { NAME: db }
+
+  cache:
+    <<: *svc
+    environment: { NAME: cache }
